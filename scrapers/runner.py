@@ -48,7 +48,6 @@ def get_connection():
 
 
 def upsert_jobs(conn, jobs: list[JobData]) -> tuple[int, int]:
-    """Insert or update jobs. Returns (new_count, updated_count)."""
     if not jobs:
         return 0, 0
 
@@ -73,7 +72,6 @@ def upsert_jobs(conn, jobs: list[JobData]) -> tuple[int, int]:
         RETURNING id, (xmax = 0) AS inserted
     """
     now = datetime.now(timezone.utc)
-    # Deduplicate by (source, external_id) before upsert to avoid batch cardinality violations
     seen = set()
     deduped = []
     for j in jobs:
@@ -149,7 +147,7 @@ def run_scraper(source_name: str, max_pages: int = 5) -> dict:
     except Exception as e:
         logger.error(f"[Runner] {source_name} failed: {e}")
         try:
-            conn.rollback()  # clear any aborted transaction before logging
+            conn.rollback()
             log_scrape(conn, source_name, "failed", 0, 0, 0, started_at, str(e)[:1000])
         except Exception:
             pass
