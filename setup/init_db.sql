@@ -1,11 +1,5 @@
--- JobSense Database Schema
--- Requires pgvector extension (provided by pgvector/pgvector:pg15 image)
-
 CREATE EXTENSION IF NOT EXISTS vector;
 
--- ─────────────────────────────────────────────
--- Core jobs table
--- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS jobs (
     id                   SERIAL PRIMARY KEY,
     external_id          VARCHAR(500),
@@ -16,22 +10,21 @@ CREATE TABLE IF NOT EXISTS jobs (
     salary_min           NUMERIC(12, 2),
     salary_max           NUMERIC(12, 2),
     salary_currency      VARCHAR(10) DEFAULT 'KES',
-    job_type             VARCHAR(50),           -- full-time, part-time, contract, internship, freelance
-    experience_level     VARCHAR(50),           -- entry, mid, senior, executive
+    job_type             VARCHAR(50),
+    experience_level     VARCHAR(50),
     remote               BOOLEAN DEFAULT FALSE,
     url                  VARCHAR(1000),
     source               VARCHAR(100) NOT NULL,
-    tags                 TEXT,                  -- comma-separated skill tags
+    tags                 TEXT,
     requirements         TEXT,
     posted_date          TIMESTAMP,
     application_deadline TIMESTAMP,
     scraped_at           TIMESTAMP DEFAULT NOW(),
     is_active            BOOLEAN DEFAULT TRUE,
-    embedding            vector(384),           -- sentence-transformers/all-MiniLM-L6-v2
+    embedding            vector(384),
     CONSTRAINT uq_jobs_source_external UNIQUE (source, external_id)
 );
 
--- Standard indexes
 CREATE INDEX IF NOT EXISTS idx_jobs_source        ON jobs(source);
 CREATE INDEX IF NOT EXISTS idx_jobs_is_active     ON jobs(is_active, scraped_at DESC);
 CREATE INDEX IF NOT EXISTS idx_jobs_job_type      ON jobs(job_type);
@@ -40,7 +33,6 @@ CREATE INDEX IF NOT EXISTS idx_jobs_remote        ON jobs(remote);
 CREATE INDEX IF NOT EXISTS idx_jobs_scraped_at    ON jobs(scraped_at DESC);
 CREATE INDEX IF NOT EXISTS idx_jobs_posted_date   ON jobs(posted_date DESC);
 
--- Full-text search index
 CREATE INDEX IF NOT EXISTS idx_jobs_fts ON jobs USING GIN (
     to_tsvector('english',
         COALESCE(title, '') || ' ' ||
@@ -50,14 +42,6 @@ CREATE INDEX IF NOT EXISTS idx_jobs_fts ON jobs USING GIN (
     )
 );
 
--- pgvector IVFFlat index (built after sufficient rows are inserted)
--- NOTE: requires ≥ 100 rows. The application creates this after first pipeline run.
--- CREATE INDEX IF NOT EXISTS idx_jobs_embedding ON jobs
---     USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
-
--- ─────────────────────────────────────────────
--- Scrape audit log
--- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS scrape_logs (
     id               SERIAL PRIMARY KEY,
     source           VARCHAR(100) NOT NULL,
@@ -75,9 +59,6 @@ CREATE TABLE IF NOT EXISTS scrape_logs (
 CREATE INDEX IF NOT EXISTS idx_scrape_logs_source ON scrape_logs(source, started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_scrape_logs_status ON scrape_logs(status, started_at DESC);
 
--- ─────────────────────────────────────────────
--- Keyword priority reference table
--- ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS keyword_priorities (
     keyword  VARCHAR(100) PRIMARY KEY,
     priority INTEGER DEFAULT 1 CHECK (priority BETWEEN 1 AND 5),
@@ -116,9 +97,6 @@ INSERT INTO keyword_priorities (keyword, priority, category) VALUES
     ('Scala',           4, 'Big Data')
 ON CONFLICT (keyword) DO NOTHING;
 
--- ─────────────────────────────────────────────
--- Useful views
--- ─────────────────────────────────────────────
 CREATE OR REPLACE VIEW v_active_jobs AS
 SELECT
     id, title, company, location, salary_min, salary_max, salary_currency,
@@ -154,7 +132,6 @@ WHERE is_active = TRUE
 GROUP BY TRIM(skill)
 ORDER BY frequency DESC;
 
--- Auto-update trigger
 CREATE OR REPLACE FUNCTION set_duration()
 RETURNS TRIGGER AS $$
 BEGIN
