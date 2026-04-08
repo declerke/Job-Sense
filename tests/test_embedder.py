@@ -1,10 +1,3 @@
-"""
-Tests for the embedding pipeline.
-
-Unit tests: embedding text generation, vector shape.
-Integration tests: require a live PostgreSQL + pgvector instance.
-  Run with: pytest tests/test_embedder.py -m integration
-"""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -12,7 +5,6 @@ import pytest
 from pipeline.embedder import build_embedding_text, embed_cv_text, get_model
 
 
-# ── Unit: build_embedding_text ────────────────────────────────────────────────
 def test_build_embedding_text_combines_fields():
     row = {
         "title": "Data Engineer",
@@ -34,25 +26,21 @@ def test_build_embedding_text_handles_none_fields():
     assert text.strip() != ""
 
 
-# ── Unit: embed_cv_text ───────────────────────────────────────────────────────
 def test_embed_cv_text_returns_correct_shape():
     cv_text = "Experienced data engineer with Python, SQL, Airflow, and dbt skills."
     vector = embed_cv_text(cv_text)
     assert isinstance(vector, list)
-    assert len(vector) == 384  # all-MiniLM-L6-v2 dimension
-    # Each element should be a float
+    assert len(vector) == 384
     assert all(isinstance(v, float) for v in vector[:5])
 
 def test_embed_cv_text_normalised():
     import math
     vector = embed_cv_text("Data Engineering portfolio project.")
     magnitude = math.sqrt(sum(v ** 2 for v in vector))
-    assert abs(magnitude - 1.0) < 0.01  # normalised embeddings have magnitude ≈ 1
+    assert abs(magnitude - 1.0) < 0.01
 
 
-# ── Unit: semantic ordering (no DB needed) ────────────────────────────────────
 def test_similar_texts_have_higher_cosine_similarity():
-    """Jobs semantically similar to the CV should score higher than unrelated ones."""
     import numpy as np
     model = get_model()
 
@@ -72,14 +60,8 @@ def test_similar_texts_have_higher_cosine_similarity():
     )
 
 
-# ── Integration: pgvector round-trip (requires live DB) ──────────────────────
 @pytest.mark.integration
 def test_embed_and_retrieve(tmp_db_conn):
-    """
-    Inserts a test job row, runs embed_unprocessed_jobs, then verifies
-    the embedding is stored and searchable.
-    Requires the `tmp_db_conn` fixture (see conftest.py).
-    """
     from pipeline.embedder import embed_unprocessed_jobs, search_similar_jobs
 
     with tmp_db_conn.cursor() as cur:
@@ -97,4 +79,4 @@ def test_embed_and_retrieve(tmp_db_conn):
     cv_vector = embed_cv_text("Python engineer with SQL and ETL experience.")
     results = search_similar_jobs(tmp_db_conn, cv_vector, top_k=5)
     job_ids = [r["id"] for r in results]
-    assert job_id in job_ids, "Inserted job should appear in top-5 matches for a relevant CV"
+    assert job_id in job_ids
