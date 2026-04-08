@@ -1,7 +1,3 @@
-"""
-Tests for the /api/cv-match FastAPI endpoint.
-LLM calls are mocked — deterministic results only.
-"""
 import io
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,7 +12,6 @@ client = TestClient(app)
 
 
 def _make_pdf_bytes(text: str = "Data Engineer with Python and SQL experience.") -> bytes:
-    """Create a minimal in-memory PDF using reportlab if available, else a mock."""
     try:
         from reportlab.pdfgen import canvas
         buf = io.BytesIO()
@@ -25,11 +20,9 @@ def _make_pdf_bytes(text: str = "Data Engineer with Python and SQL experience.")
         c.save()
         return buf.getvalue()
     except ImportError:
-        # Return a stub — the endpoint will still reject it gracefully
         return b"%PDF-1.4 fake pdf content for testing"
 
 
-# ── Endpoint: health ──────────────────────────────────────────────────────────
 def test_health():
     resp = client.get("/health")
     assert resp.status_code == 200
@@ -42,7 +35,6 @@ def test_root():
     assert "JobSense" in resp.json()["service"]
 
 
-# ── /api/cv-match validation ──────────────────────────────────────────────────
 def test_cv_match_rejects_non_pdf():
     resp = client.post(
         "/api/cv-match",
@@ -54,7 +46,7 @@ def test_cv_match_rejects_non_pdf():
 
 
 def test_cv_match_rejects_oversized_file():
-    big_file = b"x" * (6 * 1024 * 1024)  # 6 MB
+    big_file = b"x" * (6 * 1024 * 1024)
     resp = client.post(
         "/api/cv-match",
         files={"cv_file": ("cv.pdf", big_file, "application/pdf")},
@@ -64,7 +56,6 @@ def test_cv_match_rejects_oversized_file():
     assert "5 MB" in resp.json()["detail"]
 
 
-# ── /api/cv-match full flow (mocked DB + LLM) ────────────────────────────────
 def test_cv_match_returns_ranked_matches():
     mock_jobs = [
         {
@@ -104,12 +95,10 @@ def test_cv_match_returns_ranked_matches():
     body = resp.json()
     assert "matches" in body
     assert len(body["matches"]) == 2
-    # Results should be sorted by match_score descending
     scores = [m["match_score"] for m in body["matches"]]
     assert scores == sorted(scores, reverse=True)
 
 
-# ── call_claude_match fallback (no API key) ───────────────────────────────────
 def test_claude_fallback_without_api_key():
     from api.routers.cv_match import call_claude_match
     jobs = [{"id": 1, "similarity": 0.85}, {"id": 2, "similarity": 0.60}]
