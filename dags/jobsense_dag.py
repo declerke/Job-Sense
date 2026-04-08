@@ -1,8 +1,3 @@
-"""
-JobSense Pipeline DAG
-Runs daily at 7:00 AM EAT (04:00 UTC):
-  scrape all sources (parallel) → dbt run → dbt test → embed new jobs → log summary
-"""
 import os
 import sys
 from datetime import datetime, timedelta
