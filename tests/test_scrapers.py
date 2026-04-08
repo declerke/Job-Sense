@@ -1,9 +1,3 @@
-"""
-Smoke tests for scrapers.
-Each test verifies the scraper returns at least 1 valid JobData object.
-These tests make live HTTP calls — they are integration tests and require internet access.
-Run with: pytest tests/test_scrapers.py -m integration
-"""
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -24,7 +18,6 @@ def _assert_valid_jobs(jobs: list, source_name: str, min_count: int = 1):
 def test_adzuna_scraper():
     from scrapers.adzuna import AdzunaScraper
     jobs = AdzunaScraper().scrape(max_pages=1)
-    # Adzuna may be empty if no API key configured; just verify no crash
     assert isinstance(jobs, list)
 
 
@@ -33,7 +26,6 @@ def test_remoteok_scraper():
     from scrapers.remoteok import RemoteOKScraper
     jobs = RemoteOKScraper().scrape(max_pages=1)
     _assert_valid_jobs(jobs, "RemoteOK", min_count=5)
-    # All RemoteOK jobs should have remote=True
     assert all(j.remote for j in jobs), "All RemoteOK jobs should be remote"
 
 
@@ -55,7 +47,7 @@ def test_careerpointkenya_scraper():
 def test_jobwebkenya_scraper():
     from scrapers.jobwebkenya import JobWebKenyaScraper
     jobs = JobWebKenyaScraper().scrape(max_pages=1)
-    assert isinstance(jobs, list)  # site may block; just verify no crash
+    assert isinstance(jobs, list)
 
 
 @pytest.mark.integration
@@ -65,7 +57,6 @@ def test_corporatestaffing_scraper():
     assert isinstance(jobs, list)
 
 
-# ── Unit: JobData dataclass ───────────────────────────────────────────────────
 def test_jobdata_to_dict_includes_all_fields():
     job = JobData(
         title="Data Engineer",
