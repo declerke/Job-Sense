@@ -1,16 +1,13 @@
 import logging
-
 from bs4 import BeautifulSoup
-
 from .base_scraper import BaseScraper, JobData
 
 logger = logging.getLogger(__name__)
 
 BASE_URL = "https://www.brightermonday.co.ke"
 
-# Broad queries covering all job categories, not just data roles
 _QUERIES = [
-    "jobs",           # general — returns mixed listings
+    "jobs",
     "engineer",
     "analyst",
     "officer",
@@ -20,24 +17,14 @@ _QUERIES = [
     "sales",
 ]
 
-
 class BrighterMondayScraper(BaseScraper):
     SOURCE_NAME = "BrighterMonday"
 
     def scrape(self, max_pages: int = 5) -> list[JobData]:
-        """
-        BrighterMonday is an Alpine.js SPA — direct DOM selectors fail.
-        Strategy:
-          1. Playwright with network response interception (capture JSON API calls)
-          2. HTML fallback using a[href*="/listings/"] link pattern
-        Uses search queries rather than paginating /jobs/ directly.
-        """
         from playwright.sync_api import sync_playwright
 
         jobs: list[JobData] = []
         seen_urls: set[str] = set()
-
-        # Number of queries to run — scale with max_pages
         query_count = min(max_pages, len(_QUERIES))
 
         with sync_playwright() as p:
@@ -81,7 +68,6 @@ class BrighterMondayScraper(BaseScraper):
                 finally:
                     context.close()
 
-                # Primary: parse intercepted API JSON
                 json_jobs = []
                 for data in captured_json:
                     json_jobs.extend(self._parse_json(data, seen_urls))
@@ -100,7 +86,6 @@ class BrighterMondayScraper(BaseScraper):
         return jobs
 
     def _parse_json(self, data, seen_urls: set) -> list[JobData]:
-        """Extract JobData objects from an intercepted JSON API response."""
         items: list = []
         if isinstance(data, list):
             items = data
@@ -142,10 +127,6 @@ class BrighterMondayScraper(BaseScraper):
         return result
 
     def _parse_html(self, html: str, seen_urls: set) -> list[JobData]:
-        """
-        Fallback HTML parser using the known /listings/ URL pattern.
-        BrighterMonday job detail pages always contain /listings/ in the path.
-        """
         soup = BeautifulSoup(html, "lxml")
         result = []
 
@@ -163,7 +144,6 @@ class BrighterMondayScraper(BaseScraper):
             if not title or len(title) < 4:
                 continue
 
-            # Walk up DOM to find card container with enough context
             card = link.parent
             for _ in range(6):
                 if card is None:
