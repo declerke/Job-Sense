@@ -9,12 +9,6 @@ logger = logging.getLogger(__name__)
 
 BASE_URL = "https://jobwebkenya.com"
 
-# JobWebKenya is a WordPress site with the WP Job Manager plugin.
-# Structure: li.job / li.job-featured / li.job-alt cards
-# Job URLs: https://jobwebkenya.com/jobs/<slug>
-# Pagination: page 1 = BASE_URL/, page N = BASE_URL/jobs/page/N/
-
-
 class JobWebKenyaScraper(BaseScraper):
     SOURCE_NAME = "JobWebKenya"
 
@@ -49,7 +43,6 @@ class JobWebKenyaScraper(BaseScraper):
         return jobs
 
     def _parse_card(self, card, seen_urls: set) -> JobData | None:
-        # Find the primary job link — jobwebkenya.com/jobs/ href, not share buttons
         job_link = None
         for a in card.find_all("a", href=True):
             href = a["href"]
@@ -69,22 +62,18 @@ class JobWebKenyaScraper(BaseScraper):
         if not title or len(title) < 5:
             return None
 
-        # Extract company from title ("Job Title at Company Name")
         company = None
         at_match = re.search(r"\bat\b(.+)$", title, re.IGNORECASE)
         if at_match:
             company = at_match.group(1).strip()
         else:
-            # Fall back to div.lista which contains company description
             lista = card.select_one("div.lista")
             if lista:
                 text = lista.get_text(" ", strip=True)
-                # Use first sentence (up to first period or 80 chars)
                 first_sentence = text.split(".")[0].strip()
                 if first_sentence and len(first_sentence) < 100:
                     company = first_sentence
 
-        # Location: div containing "Location:"
         location = "Kenya"
         for div in card.find_all("div"):
             text = div.get_text(strip=True)
@@ -92,10 +81,9 @@ class JobWebKenyaScraper(BaseScraper):
                 location = text.replace("Location:", "").strip() or "Kenya"
                 break
 
-        # Job type from span.jtype
         jtype_el = card.select_one("span.jtype")
         job_type = jtype_el.get_text(strip=True).lower() if jtype_el else None
-        # Normalise to accepted values
+        
         job_type_map = {
             "full-time": "full-time", "full time": "full-time",
             "part-time": "part-time", "part time": "part-time",
