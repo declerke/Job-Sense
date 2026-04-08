@@ -10,12 +10,6 @@ logger = logging.getLogger(__name__)
 BASE_URL = "https://fuzu.com"
 JOBS_URL = f"{BASE_URL}/kenya/jobs"
 
-# Fuzu is Cloudflare-protected — requests always returns 403.
-# Playwright passes the JS challenge and gets full page HTML.
-# Job posting URLs use /kenya/jobs/<slug> (plural).
-# /kenya/job/<location> (singular) is for location/category filters — ignore.
-
-
 class FuzuScraper(BaseScraper):
     SOURCE_NAME = "Fuzu"
 
@@ -73,7 +67,6 @@ class FuzuScraper(BaseScraper):
                     except Exception:
                         pass
 
-                # Primary: intercepted JSON API
                 json_jobs = []
                 for data in captured_json:
                     json_jobs.extend(self._parse_json(data, seen_urls))
@@ -86,7 +79,7 @@ class FuzuScraper(BaseScraper):
                     logger.info(f"[Fuzu] Page {page_num} HTML: {len(html_jobs)} jobs")
                     jobs.extend(html_jobs)
                     if not html_jobs:
-                        break  # no more pages
+                        break
                 else:
                     break
 
@@ -97,10 +90,6 @@ class FuzuScraper(BaseScraper):
         return jobs
 
     def _parse_html(self, html: str, seen_urls: set) -> list[JobData]:
-        """
-        Parse Fuzu HTML. Job postings use /kenya/jobs/<slug> links (with 's').
-        /kenya/job/<location> (no 's') links are category/location filters — skip them.
-        """
         soup = BeautifulSoup(html, "lxml")
         result = []
 
@@ -115,13 +104,11 @@ class FuzuScraper(BaseScraper):
                 continue
             seen_urls.add(url)
 
-            # Title: try heading inside link, fall back to link text
             title_el = link.select_one("h2, h3, [class*='title'], [class*='Title']")
             title = (title_el or link).get_text(strip=True)
             if not title or len(title) < 4:
                 continue
 
-            # Walk up to card container for company/location context
             card = link.parent
             for _ in range(6):
                 if card is None:
@@ -157,7 +144,6 @@ class FuzuScraper(BaseScraper):
         return result
 
     def _parse_json(self, data, seen_urls: set) -> list[JobData]:
-        """Parse job data from intercepted JSON API responses."""
         items: list = []
         if isinstance(data, list):
             items = data
