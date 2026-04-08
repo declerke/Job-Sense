@@ -23,7 +23,6 @@ def get_model() -> SentenceTransformer:
 
 
 def build_embedding_text(row: dict) -> str:
-    """Construct the text to embed for a job row."""
     parts = [
         row.get("title") or "",
         row.get("company") or "",
@@ -37,10 +36,6 @@ def build_embedding_text(row: dict) -> str:
 
 
 def embed_unprocessed_jobs(conn, batch_size: int = 64) -> int:
-    """
-    Fetch jobs without embeddings, generate vectors, and store in pgvector.
-    Returns the count of jobs embedded.
-    """
     register_vector(conn)
     model = get_model()
 
@@ -77,14 +72,12 @@ def embed_unprocessed_jobs(conn, batch_size: int = 64) -> int:
         total_embedded += len(batch)
         logger.info(f"[Embedder] Embedded {total_embedded}/{len(rows)} jobs")
 
-    # Build IVFFlat index after sufficient rows exist
     _ensure_ivfflat_index(conn)
 
     return total_embedded
 
 
 def _ensure_ivfflat_index(conn):
-    """Create the IVFFlat index once we have ≥ 100 embedded rows."""
     with conn.cursor() as cur:
         cur.execute("SELECT COUNT(*) FROM jobs WHERE embedding IS NOT NULL")
         count = cur.fetchone()[0]
@@ -113,17 +106,12 @@ def _ensure_ivfflat_index(conn):
 
 
 def embed_cv_text(cv_text: str) -> list[float]:
-    """Embed a CV text string and return as a list of floats."""
     model = get_model()
     vector = model.encode(cv_text[:2000], normalize_embeddings=True)
     return vector.tolist()
 
 
 def search_similar_jobs(conn, cv_vector: list[float], top_k: int = 10) -> list[dict]:
-    """
-    Find the top_k most semantically similar active jobs to the given CV embedding.
-    Returns list of job dicts with similarity scores.
-    """
     register_vector(conn)
 
     with conn.cursor(cursor_factory=psycopg2.extras.DictCursor) as cur:
