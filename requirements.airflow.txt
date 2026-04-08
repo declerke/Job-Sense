@@ -1,0 +1,21 @@
+# Scrapers
+requests==2.32.3
+beautifulsoup4==4.12.3
+lxml==5.3.0
+playwright==1.47.0
+
+# DB — SQLAlchemy must stay <2.0 (Airflow 2.8.4 + dbt 1.7.x both require it)
+psycopg2-binary==2.9.9
+sqlalchemy==1.4.52
+pgvector==0.3.5
+
+# Embedding (for embed step in DAG)
+sentence-transformers==3.2.1
+numpy<2.0
+
+# dbt
+dbt-postgres==1.7.4
+
+# Utilities
+python-dotenv==1.0.1
+pandas==2.2.3

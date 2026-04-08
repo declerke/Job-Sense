@@ -1,0 +1,23 @@
+# API
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+sqlalchemy==2.0.36
+psycopg2-binary==2.9.9
+pgvector==0.3.5
+pydantic==2.9.2
+pydantic-settings==2.6.1
+python-multipart==0.0.12
+
+# Embedding & CV matching
+sentence-transformers==3.2.1
+pdfplumber==0.11.4
+anthropic==0.39.0
+
+# Streamlit frontend
+streamlit==1.40.1
+plotly==5.24.1
+pandas==2.2.3
+requests==2.32.3
+
+# Shared utilities
+python-dotenv==1.0.1

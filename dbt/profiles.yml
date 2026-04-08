@@ -1,0 +1,12 @@
+jobsense:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
+      port: "{{ env_var('POSTGRES_PORT', '5432') | int }}"
+      user: "{{ env_var('POSTGRES_USER', 'jobsense') }}"
+      pass: "{{ env_var('POSTGRES_PASSWORD', 'jobsense_secret') }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'jobsense') }}"
+      schema: public
+      threads: 4
